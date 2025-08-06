@@ -33,6 +33,7 @@ class ChessBoard : public QWidget {  // The class is defined as a QWidget; this 
         void paintEvent(QPaintEvent *event) override;
         void mousePressEvent(QMouseEvent *event) override;
 
+    // We put stuff that is only used within the class in private, stuff that is inherited in protected, and stuff that needs to be used elsewhere in public
     private:
         int squareSize;
         QPoint selectedSquare;

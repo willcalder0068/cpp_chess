@@ -1,7 +1,11 @@
 #include <QApplication>
+#include <QMessageBox>
 #include "mainwindow.h"
+#include "userinformation.h"
+#include "promptdialog.h"
 
 /*
+
 tasks.json: We let Qt handle the compilation
 {
     "version": "2.0.0",
@@ -59,20 +63,59 @@ HEADERS += mainwindow.h \
            chessboard.h
            ... (every .h file in the program)
 
+LIBS += -lssl -lcrypto
+
 
 COMPILE CODE:
-cd /c/Users/wscal/OneDrive/Desktop/cpp/chess
-rm -f Makefile *.o release/chess.exe  // Remove files; delete the auto generated Makefile, all compiled files (end in .o), and the old executable file
-qmake  // Reads chess.pro and generate a new Makefile
-mingw32-make  // Compile source files (.cpp)
-./release/chess.exe  // Execute
+cd /c/Users/wscal/OneDrive/Desktop/cpp/chess           // Navigate to the correct directory
+rm -f release/chess.exe                                // Delete the old executable to compile the new one (incase there are any changes in the code)
+qmake                                                  // Reads chess.pro and generates new Makefiles
+mingw32-make                                           // Compile source files (.cpp -> .o)
+./release/chess.exe                                    // Execute
+
+    **If we have drastically altered the .pro file or include paths: rm -f Makefile* release/*.o release/chess.exe release/moc_* .qmake.stash
+        ^^Remove all files used in previous compile to ensure a fresh rebuild (* means all files starting or ending with, depending on its location)
 
 */
 
 // Clarifies number of arguments for the compiler as well as setting them as strings (char pointers point to the first char of the string)
 int main(int argc, char *argv[]) {
-    QApplication a(argc, argv);  // Creates a Qt application object
-    MainWindow w;  // Creates a main window object
-    w.show();  // Displays the main window on screen
-    return a.exec();  // Starts the Qt event loop; used to process events
+    QApplication a(argc, argv);  // Create the application object (which manages the event loop)
+
+    MainWindow w;  // Instantiate the MainWindow object with an implicit call to its construtor ( MainWindow w = MainWindow(); )
+    w.show();  // Display the MainWindow
+
+    int iUserChoice = 0;
+
+    // Loop until valid input
+    while (true) {
+        PromptDialog prompt("Press 1 to register or 2 to login: ", &w);
+        prompt.followParent();  // Position under main window
+        QObject::connect(&w, &MainWindow::geometryChanged, &prompt, &PromptDialog::followParent);  // Connect the geometryChanged signal to the followParent slot
+
+        bool isInt = true;
+
+        // Dialog is accepted when the OK button is pressed
+        if (prompt.exec() == QDialog::Accepted) {
+            QString qUserChoice = prompt.getInputText();
+            std::string sUserChoice = qUserChoice.toStdString();
+
+            // Try to convert to int; if the user typed a non int, fall through to the QMessageBox warning
+            try {
+                iUserChoice = std::stoi(sUserChoice);
+            } catch (...) { isInt = false; }
+
+            if (isInt) {
+                if (iUserChoice == 1 || iUserChoice == 2) { break; }  // Break and instantiate UserInformation
+                else if (iUserChoice == 0) { return 0; }  // Terminate
+            }
+
+            QMessageBox::warning(&w, "Invalid Input", "Please enter 1 to register or 2 to login.");  // Show invalid input message, reloop
+        } 
+        else { return 0; }  // User clicked cancel or closed dialog; terminate program successfully
+    }
+
+    UserInformation info(iUserChoice, &w);  // Instatiate UserInformation; same as: UserInformation info = UserInformation(iUserchoice, &w)
+
+    return a.exec();  // Start the Qt event loop
 }

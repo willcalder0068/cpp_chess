@@ -7,11 +7,12 @@ ChessBoard::ChessBoard(QWidget *parent)
         setMinimumSize(8 * squareSize, 10 * squareSize);
 }
 
+// Used implicitly by Qt to manage widget layouts
 QSize ChessBoard::sizeHint() const {
     return QSize(8 * squareSize, 10 * squareSize);
 }
 
-// Automatically called upon construction; also called within mousePressEvent
+// Automatically called upon construction; also called with a mousePressEvent (user clicks screen)
 void ChessBoard::paintEvent(QPaintEvent *) {
     QPainter painter(this);
     drawBoard(painter);
@@ -34,9 +35,9 @@ void ChessBoard::drawBoard(QPainter &painter) {
     for (int row = 0; row < 8; ++row) {
         for (int col = 0; col < 8; ++col) {
             QRect rect(col * squareSize, row * squareSize, squareSize, squareSize);
-            painter.fillRect(rect, (row + col) % 2 ? dark : light);
+            painter.fillRect(rect, (row + col) % 2 ? dark : light);  // Drawing the squares of the board
 
-            // If the square is selected, highlight it
+            // If the square is selected, highlight it; if the click is outside of the board, nothing happens
             if (selectedSquare == QPoint(col, row)) {
                 painter.setBrush(QColor(255, 100, 100, 120));
                 painter.drawRect(rect);
