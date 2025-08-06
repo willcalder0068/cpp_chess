@@ -19,6 +19,9 @@ class UserInformation {
 
         int elo;
         int gameMode;
+
+        void promptGameMode(QWidget *parentWidget);
+        void promptForElo(QWidget *parentWidget);
         
     private:
         const std::string USER_FILE_ROOT = "C:/Users/wscal/OneDrive/Desktop/cpp/chess/userdata/userrecords/";  // Store individual file in user records folder
@@ -32,8 +35,6 @@ class UserInformation {
 
         void registerUser(QWidget *parentWidget);
         void loginUser(QWidget *parentWidget);
-        void promptGameMode(QWidget *parentWidget);
-        void promptForElo(QWidget *parentWidget);
 
         std::string trim(const std::string& str);
 };

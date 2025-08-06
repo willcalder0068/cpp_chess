@@ -5,7 +5,7 @@
 
 PromptDialog::PromptDialog(const QString &promptText, QWidget *parent)
     : QDialog(parent) {
-    setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
+    setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);  // Set the window as frameless (embedded within the parent)
     setFixedSize(480, 80);
 
     followParent();  // Call the slot function independent of the signal to orient the dialog box

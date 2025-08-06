@@ -13,7 +13,10 @@ class ChessBoard : public QWidget {  // The class is defined as a QWidget; this 
         ChessBoard(QWidget *parent = nullptr);
         QSize sizeHint() const override;
 
+        QPoint selectedSquare;
+
         struct Piece { int row; int col; };
+        
         QMap<QString, Piece> boardState = {
             {"w a pawn", {6, 0} }, {"w b pawn", {6, 1} }, {"w c pawn", {6, 2} }, {"w d pawn", {6, 3} }, 
             {"w e pawn", {6, 4} }, {"w f pawn", {6, 5} }, {"w g pawn", {6, 6} }, {"w h pawn", {6, 7} }, 
@@ -36,7 +39,6 @@ class ChessBoard : public QWidget {  // The class is defined as a QWidget; this 
     // We put stuff that is only used within the class in private, stuff that is inherited in protected, and stuff that needs to be used elsewhere in public
     private:
         int squareSize;
-        QPoint selectedSquare;
 
         void drawBoard(QPainter &painter);
         void drawPieces(QPainter &painter);

@@ -1,8 +1,10 @@
 #include <QApplication>
 #include <QMessageBox>
+#include <QTimer>
 #include "mainwindow.h"
 #include "userinformation.h"
 #include "promptdialog.h"
+#include "chessboard.h"
 
 /*
 
@@ -95,27 +97,36 @@ int main(int argc, char *argv[]) {
 
         bool isInt = true;
 
-        // Dialog is accepted when the OK button is pressed
-        if (prompt.exec() == QDialog::Accepted) {
-            QString qUserChoice = prompt.getInputText();
-            std::string sUserChoice = qUserChoice.toStdString();
+        prompt.exec();  // Display the dialog; program will move to the next line when the OK button is clicked
+        QString qUserChoice = prompt.getInputText();
+        std::string sUserChoice = qUserChoice.toStdString();
 
-            // Try to convert to int; if the user typed a non int, fall through to the QMessageBox warning
-            try {
-                iUserChoice = std::stoi(sUserChoice);
-            } catch (...) { isInt = false; }
+        // Try to convert to int; if the user typed a non int, fall through to the QMessageBox warning
+        try {
+            iUserChoice = std::stoi(sUserChoice);
+        } catch (...) { isInt = false; }
 
-            if (isInt) {
-                if (iUserChoice == 1 || iUserChoice == 2) { break; }  // Break and instantiate UserInformation
-                else if (iUserChoice == 0) { return 0; }  // Terminate
-            }
+        if (isInt) {
+            if (iUserChoice == 1 || iUserChoice == 2) { break; }  // Break and instantiate UserInformation outside of the loop
+            else if (iUserChoice == 0) { return 0; }  // Terminate program
+        }
 
-            QMessageBox::warning(&w, "Invalid Input", "Please enter 1 to register or 2 to login.");  // Show invalid input message, reloop
-        } 
-        else { return 0; }  // User clicked cancel or closed dialog; terminate program successfully
+        QMessageBox::warning(&w, "Invalid Input", "Please enter 1 to register or 2 to login.");  // Show invalid input message, reloop
     }
 
     UserInformation info(iUserChoice, &w);  // Instatiate UserInformation; same as: UserInformation info = UserInformation(iUserchoice, &w)
 
-    return a.exec();  // Start the Qt event loop
+    //QMap<QString, ChessBoard::Piece> b = w.board->boardState;  // public members can be accessed
+
+    // Prepares code that is going to run after the event loop is started (must be declared in a singleShot, as all code after a.exec() will never run)
+    QTimer::singleShot(0, [&]() {
+        if (info.gameMode == 1) {
+
+        }
+        else if (info.gameMode == 2) {
+            
+        }
+    });
+
+    return a.exec();  // Start the Qt event loop, allowing the user to interact with the board (starts after we have finished in UserInformation)
 }

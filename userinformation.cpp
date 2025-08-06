@@ -73,6 +73,7 @@ void UserInformation::registerUser(QWidget *parentWidget) {
     saveUser(username, salt, hashed);
     QMessageBox::information(parentWidget, "Success", "User registered.");
 
+    gameMode = 2;  // There are no old games to review, so mark the gameMode as new game, thne prompt for elo
     promptForElo(parentWidget);
 }
 
@@ -149,7 +150,7 @@ void UserInformation::promptGameMode(QWidget* parentWidget) {
     }
 
     if (gameMode == 1) {
-        // FILL THIS IN WHEN WE HAVE FUNCTINOAL REVIEW INFRASTRUCTURE
+        elo = -1;  // Put impossible elo; we will be reviewing, not playing
     }
     if (gameMode == 2) { promptForElo(parentWidget); }
 }
