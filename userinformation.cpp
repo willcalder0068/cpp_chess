@@ -14,6 +14,7 @@ string UserInformation::trim(const string& str) {
     return (begin == string::npos) ? "" : str.substr(begin, end - begin + 1);
 }
 
+
 // Constructor; we have already filtered for erroneous inputs
 UserInformation::UserInformation(int input, QWidget *parentWidget) {
     if (input == 1) { registerUser(parentWidget); }
@@ -32,10 +33,12 @@ void UserInformation::registerUser(QWidget *parentWidget) {
         prompt.exec();  // Display dialog prompt
         username = trim(prompt.getInputText().toStdString());
 
-        if (users.count(username))
+        if (username == "")
+            QMessageBox::warning(parentWidget, "Invalid Username", "Invalid username. Try again.");
+        else if (username == "0") { std::exit(0); }
+        else if (users.count(username))
             QMessageBox::warning(parentWidget, "Username Taken", "User already exists. Try again.");
-        else if (username == "0" || username == "") { std::exit(0); }
-        else { break; }  // Exit the loop
+        else { break; }  // Exit the loop (valid username)
     }
 
     while (true) {
@@ -44,17 +47,25 @@ void UserInformation::registerUser(QWidget *parentWidget) {
         passPrompt.exec();  // Display dialog prompt
         password = trim(passPrompt.getInputText().toStdString());
 
-        if (password == "0" || password == "") { std::exit(0); }
+        bool validPassword = true;
 
-        PromptDialog confirmPrompt("Confirm password: ", parentWidget);  // Make sure the user knows their password
-        confirmPrompt.followParent();
-        confirmPrompt.exec();
-        passwordConfirm = trim(confirmPrompt.getInputText().toStdString());
+        if (password == "0") { std::exit(0); }
+        else if (password == "" ) {
+            QMessageBox::warning(parentWidget, "Invalid Password", "Invalid password. Try again.");
+            validPassword = false;
+        }
 
-        if (passwordConfirm == "0" || passwordConfirm == "" ) { std::exit(0); }
-        else if (password == passwordConfirm) { break; }  // Exit the loop
-        else
-            QMessageBox::warning(parentWidget, "Mismatch", "Passwords do not match. Try again.");
+        if (validPassword) {
+            PromptDialog confirmPrompt("Confirm password: ", parentWidget);  // Make sure the user knows their password
+            confirmPrompt.followParent();
+            confirmPrompt.exec();
+            passwordConfirm = trim(confirmPrompt.getInputText().toStdString());
+
+            if (passwordConfirm == "0") { std::exit(0); }
+            else if (password == passwordConfirm) { break; }  // Exit the loop
+            else
+                QMessageBox::warning(parentWidget, "Mismatch", "Passwords do not match. Try again.");
+        }
     }
 
     string salt = generateSalt();  // Generate the random salt for our user
@@ -76,10 +87,13 @@ void UserInformation::loginUser(QWidget *parentWidget) {
         userPrompt.exec();
         username = trim(userPrompt.getInputText().toStdString());
 
-        if (username == "0" || username == "") { std::exit(0); }
+        if (username == "") {
+            QMessageBox::warning(parentWidget, "Invalid Username", "Invalid username. Try again.");
+        }
+        else if (username == "0") { std::exit(0); }
         else if (!users.count(username))
             QMessageBox::warning(parentWidget, "Not Found", "User does not exist. Try again.");
-        else { break; }  // Exit the loop
+        else { break; }  // Exit the loop (valid username)
     }
 
     while (true) {
@@ -88,16 +102,24 @@ void UserInformation::loginUser(QWidget *parentWidget) {
         passPrompt.exec();
         password = trim(passPrompt.getInputText().toStdString());
 
-        if (password == "0" || password == "") { std::exit(0); }
+        bool validPassword = true;
 
-        auto [salt, storedHash] = users[username];  // Iniialize variables salt and storedHash with the values in the user map
-        string inputHash = sha256(password + PEPPER + salt);  // Get the hash generated from the entered password
+        if (password == "0") { std::exit(0); }
+        else if (password == "") {
+            QMessageBox::warning(parentWidget, "Invalid password", "Invalid password. Try again.");
+            validPassword = false;
+        }
 
-        if (inputHash == storedHash) {
-            QMessageBox::information(parentWidget, "Success", "Login successful.");
-            break;  // Exit the loop
-        } else
-            QMessageBox::warning(parentWidget, "Incorrect", "Wrong password. Try again.");
+        if (validPassword) {
+            auto [salt, storedHash] = users[username];  // Iniialize variables salt and storedHash with the values in the user map
+            string inputHash = sha256(password + PEPPER + salt);  // Get the hash generated from the entered password
+
+            if (inputHash == storedHash) {
+                QMessageBox::information(parentWidget, "Success", "Login successful.");
+                break;  // Exit the loop
+            } else
+                QMessageBox::warning(parentWidget, "Incorrect", "Wrong password. Try again.");
+        }   
     }
 
     promptGameMode(parentWidget);
@@ -105,7 +127,7 @@ void UserInformation::loginUser(QWidget *parentWidget) {
 
 void UserInformation::promptGameMode(QWidget* parentWidget) {
     while (true) {
-        PromptDialog gameModePrompt("Press 1 to review old games, press 2 to start a new game: ", parentWidget);
+        PromptDialog gameModePrompt("Press 1 to review or 2 to start a new game: ", parentWidget);
         gameModePrompt.followParent();
         gameModePrompt.exec();
         string sMode = trim(gameModePrompt.getInputText().toStdString());
@@ -119,15 +141,17 @@ void UserInformation::promptGameMode(QWidget* parentWidget) {
         } catch (...) { isInt = false; }
 
         if (isInt) {
-            if (gameMode == 1) { 
-                break;  // MODIFY LATER WHEN WE HAVE GAME REVIEW INFRASTRUCTRUE
-            }
-            else if (gameMode == 2) { promptForElo(parentWidget); }
+            if (gameMode == 1 || gameMode == 2) { break; }  // Exit the loop before calling promptForElo to avoid runtime errors
             else if (gameMode == 0) { std::exit(0); }
         }
 
         QMessageBox::warning(parentWidget, "Error", "Not a valid game mode. Try again.");
     }
+
+    if (gameMode == 1) {
+        // FILL THIS IN WHEN WE HAVE FUNCTINOAL REVIEW INFRASTRUCTURE
+    }
+    if (gameMode == 2) { promptForElo(parentWidget); }
 }
 
 void UserInformation::promptForElo(QWidget* parentWidget) {
@@ -146,7 +170,10 @@ void UserInformation::promptForElo(QWidget* parentWidget) {
         } catch(...) { isInt = false; }
 
         if (isInt) { 
-            if (elo >= 500 && elo <= 2500) { break; }  // Exit the loop
+            if (elo >= 500 && elo <= 2500) { 
+                QMessageBox::information(parentWidget, "Successful Matchup", "Playing opponent with elo " + QString::number(elo));
+                break;  // Exit the loop
+            }
             else if (elo == 0) { std::exit(0); }  // Terminate
         }
         
