@@ -100,7 +100,34 @@ void UserInformation::loginUser(QWidget *parentWidget) {
             QMessageBox::warning(parentWidget, "Incorrect", "Wrong password. Try again.");
     }
 
-    promptForElo(parentWidget);
+    promptGameMode(parentWidget);
+}
+
+void UserInformation::promptGameMode(QWidget* parentWidget) {
+    while (true) {
+        PromptDialog gameModePrompt("Press 1 to review old games, press 2 to start a new game: ", parentWidget);
+        gameModePrompt.followParent();
+        gameModePrompt.exec();
+        string sMode = trim(gameModePrompt.getInputText().toStdString());
+
+        bool isInt = true;
+        gameMode = -1;  // Reset gameMode to avoid using stale values
+
+        // Try to convert to int; if the user typed a non int, fall through to the QMessageBox warning
+        try {
+            gameMode = std::stoi(sMode);
+        } catch (...) { isInt = false; }
+
+        if (isInt) {
+            if (gameMode == 1) { 
+                break;  // MODIFY LATER WHEN WE HAVE GAME REVIEW INFRASTRUCTRUE
+            }
+            else if (gameMode == 2) { promptForElo(parentWidget); }
+            else if (gameMode == 0) { std::exit(0); }
+        }
+
+        QMessageBox::warning(parentWidget, "Error", "Not a valid game mode. Try again.");
+    }
 }
 
 void UserInformation::promptForElo(QWidget* parentWidget) {
@@ -111,6 +138,7 @@ void UserInformation::promptForElo(QWidget* parentWidget) {
         string sElo = trim(registerEloPrompt.getInputText().toStdString());
 
         bool isInt = true;
+        elo = -1;  // Reset elo to avoid using stale values
 
         // Try to convert to int; if the user typed a non int, fall through to the QMessageBox warning
         try {
@@ -119,7 +147,7 @@ void UserInformation::promptForElo(QWidget* parentWidget) {
 
         if (isInt) { 
             if (elo >= 500 && elo <= 2500) { break; }  // Exit the loop
-            if (elo == 0) { std::exit(0); }  // Terminate
+            else if (elo == 0) { std::exit(0); }  // Terminate
         }
         
         QMessageBox::warning(parentWidget, "Error", "Elo must be between 500 and 2500. Try again.");
@@ -174,5 +202,5 @@ void UserInformation::saveUser(const string& username, const string& salt, const
     out1 << username << " " << salt << " " << hash << "\n";  // Separate the tokens by spaces; separate the users by newlines
 
     ofstream out2(USER_FILE_ROOT + username, ios::app);  // Print the username to the users personal file; holds the result of every game they have played
-    out2 << username << "\n--------------------------------------------------\n";
+    out2 << username << "\n---------------------------------------------------------------------\n";
 }

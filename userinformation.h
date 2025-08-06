@@ -18,10 +18,11 @@ class UserInformation {
         UserInformation(int input, QWidget *parent);
 
         int elo;
+        int gameMode;
         
     private:
-        const std::string USER_FILE_ROOT = "C:/Users/wscal/OneDrive/Desktop/cpp/chess/userdata/userrecords/";  // Store individual user records
-        const std::string USERBASE_FILE = "C:/Users/wscal/OneDrive/Desktop/cpp/chess/userdata/userbase.txt";  // Add users to user base
+        const std::string USER_FILE_ROOT = "C:/Users/wscal/OneDrive/Desktop/cpp/chess/userdata/userrecords/";  // Store individual file in user records folder
+        const std::string USERBASE_FILE = "C:/Users/wscal/OneDrive/Desktop/cpp/chess/userdata/userbase.txt";  // Add user information to the user base
         const std::string PEPPER = "asdjkgb1458u79sdgkuh";
 
         std::string generateSalt(int length = 12);
@@ -31,6 +32,7 @@ class UserInformation {
 
         void registerUser(QWidget *parentWidget);
         void loginUser(QWidget *parentWidget);
+        void promptGameMode(QWidget *parentWidget);
         void promptForElo(QWidget *parentWidget);
 
         std::string trim(const std::string& str);

@@ -85,12 +85,12 @@ int main(int argc, char *argv[]) {
     MainWindow w;  // Instantiate the MainWindow object with an implicit call to its construtor ( MainWindow w = MainWindow(); )
     w.show();  // Display the MainWindow
 
-    int iUserChoice = 0;
+    int iUserChoice = -1;
 
     // Loop until valid input
     while (true) {
         PromptDialog prompt("Press 1 to register or 2 to login: ", &w);
-        prompt.followParent();  // Position under main window
+        prompt.followParent();  // Position under main windowS
         QObject::connect(&w, &MainWindow::geometryChanged, &prompt, &PromptDialog::followParent);  // Connect the geometryChanged signal to the followParent slot
 
         bool isInt = true;
