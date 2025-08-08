@@ -1,6 +1,5 @@
 #include <QApplication>
 #include <QMessageBox>
-#include <QTimer>
 #include "mainwindow.h"
 #include "userinformation.h"
 #include "promptdialog.h"
@@ -92,14 +91,12 @@ int main(int argc, char *argv[]) {
     // Loop until valid input
     while (true) {
         PromptDialog prompt("Press 1 to register or 2 to login: ", &w);
-        prompt.followParent();  // Position under main windowS
+        prompt.followParent();  // Position under main windows
         QObject::connect(&w, &MainWindow::geometryChanged, &prompt, &PromptDialog::followParent);  // Connect the geometryChanged signal to the followParent slot
+        prompt.exec();  // Display the dialog; program will move to the next line when the OK button is clicked
 
         bool isInt = true;
-
-        prompt.exec();  // Display the dialog; program will move to the next line when the OK button is clicked
-        QString qUserChoice = prompt.getInputText();
-        std::string sUserChoice = qUserChoice.toStdString();
+        std::string sUserChoice = prompt.getInputText().toStdString();
 
         // Try to convert to int; if the user typed a non int, fall through to the QMessageBox warning
         try {
@@ -116,17 +113,7 @@ int main(int argc, char *argv[]) {
 
     UserInformation info(iUserChoice, &w);  // Instatiate UserInformation; same as: UserInformation info = UserInformation(iUserchoice, &w)
 
-    //QMap<QString, ChessBoard::Piece> b = w.board->boardState;  // public members can be accessed
+    w.board->setInfo(&info);  // Make the data in UserInformation accessible for our ChessBoard instance
 
-    // Prepares code that is going to run after the event loop is started (must be declared in a singleShot, as all code after a.exec() will never run)
-    QTimer::singleShot(0, [&]() {
-        if (info.gameMode == 1) {
-
-        }
-        else if (info.gameMode == 2) {
-            
-        }
-    });
-
-    return a.exec();  // Start the Qt event loop, allowing the user to interact with the board (starts after we have finished in UserInformation)
+    return a.exec();  // Start the Qt event loop, allowing the user to interact with the board (starts after we have finished with UserInformation)
 }

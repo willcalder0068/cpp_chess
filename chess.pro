@@ -1,6 +1,8 @@
 QT += widgets
 CONFIG += c++17
 
+INCLUDEPATH += $$PWD/extern
+
 SOURCES += main.cpp \
            mainwindow.cpp \
            chessboard.cpp \
@@ -10,6 +12,7 @@ SOURCES += main.cpp \
 HEADERS += mainwindow.h \
            chessboard.h \
            userinformation.h \
-           promptdialog.h
+           promptdialog.h \
+           extern/chess.hpp
 
 LIBS += -lssl -lcrypto

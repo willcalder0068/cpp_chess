@@ -1,19 +1,13 @@
 #include "userinformation.h"
 #include "promptdialog.h"
+#include "mainwindow.h"
 #include <QApplication>
 #include <QMessageBox>
+#include <QString>
 #include <algorithm>
 
 
 using namespace std;
-
-// Gets rid of the leading and trailing white spaces, returning the trimmed string
-string UserInformation::trim(const string& str) {
-    auto begin = str.find_first_not_of(" \t\r\n");
-    auto end = str.find_last_not_of(" \t\r\n");
-    return (begin == string::npos) ? "" : str.substr(begin, end - begin + 1);
-}
-
 
 // Constructor; we have already filtered for erroneous inputs
 UserInformation::UserInformation(int input, QWidget *parentWidget) {
@@ -35,7 +29,7 @@ void UserInformation::registerUser(QWidget *parentWidget) {
 
         if (username == "")
             QMessageBox::warning(parentWidget, "Invalid Username", "Invalid username. Try again.");
-        else if (username == "0") { std::exit(0); }
+        else if (username == "0") { std::exit(0); }  // Terminate program
         else if (users.count(username))
             QMessageBox::warning(parentWidget, "Username Taken", "User already exists. Try again.");
         else { break; }  // Exit the loop (valid username)
@@ -47,21 +41,16 @@ void UserInformation::registerUser(QWidget *parentWidget) {
         passPrompt.exec();  // Display dialog prompt
         password = trim(passPrompt.getInputText().toStdString());
 
-        bool validPassword = true;
-
-        if (password == "0") { std::exit(0); }
-        else if (password == "" ) {
+        if (password == "0") { std::exit(0); }  // Terminate program
+        else if (password == "" )
             QMessageBox::warning(parentWidget, "Invalid Password", "Invalid password. Try again.");
-            validPassword = false;
-        }
-
-        if (validPassword) {
+        else {
             PromptDialog confirmPrompt("Confirm password: ", parentWidget);  // Make sure the user knows their password
             confirmPrompt.followParent();
             confirmPrompt.exec();
             passwordConfirm = trim(confirmPrompt.getInputText().toStdString());
 
-            if (passwordConfirm == "0") { std::exit(0); }
+            if (passwordConfirm == "0") { std::exit(0); }  // Terminate program
             else if (password == passwordConfirm) { break; }  // Exit the loop
             else
                 QMessageBox::warning(parentWidget, "Mismatch", "Passwords do not match. Try again.");
@@ -91,7 +80,7 @@ void UserInformation::loginUser(QWidget *parentWidget) {
         if (username == "") {
             QMessageBox::warning(parentWidget, "Invalid Username", "Invalid username. Try again.");
         }
-        else if (username == "0") { std::exit(0); }
+        else if (username == "0") { std::exit(0); }  // Terminate program
         else if (!users.count(username))
             QMessageBox::warning(parentWidget, "Not Found", "User does not exist. Try again.");
         else { break; }  // Exit the loop (valid username)
@@ -105,7 +94,7 @@ void UserInformation::loginUser(QWidget *parentWidget) {
 
         bool validPassword = true;
 
-        if (password == "0") { std::exit(0); }
+        if (password == "0") { std::exit(0); }  // Terminate program
         else if (password == "") {
             QMessageBox::warning(parentWidget, "Invalid password", "Invalid password. Try again.");
             validPassword = false;
@@ -143,9 +132,8 @@ void UserInformation::promptGameMode(QWidget* parentWidget) {
 
         if (isInt) {
             if (gameMode == 1 || gameMode == 2) { break; }  // Exit the loop before calling promptForElo to avoid runtime errors
-            else if (gameMode == 0) { std::exit(0); }
+            else if (gameMode == 0) { std::exit(0); }  // Terminate program
         }
-
         QMessageBox::warning(parentWidget, "Error", "Not a valid game mode. Try again.");
     }
 
@@ -157,10 +145,11 @@ void UserInformation::promptGameMode(QWidget* parentWidget) {
 
 void UserInformation::promptForElo(QWidget* parentWidget) {
     while (true) {
-        PromptDialog registerEloPrompt("Enter desired opponent elo [500-2500]: ", parentWidget);
+        // The user can play the computer with a certain elo, or they can play against a friend
+        PromptDialog registerEloPrompt("Enter desired opponent elo [500-2500]: \n  (Press 1 to play a friend)", parentWidget);
         registerEloPrompt.followParent();
         registerEloPrompt.exec();
-        string sElo = trim(registerEloPrompt.getInputText().toStdString());
+        string sElo = trim(registerEloPrompt.getInputText().toStdString());  // Convert input from QString to std::string
 
         bool isInt = true;
         elo = -1;  // Reset elo to avoid using stale values
@@ -172,12 +161,16 @@ void UserInformation::promptForElo(QWidget* parentWidget) {
 
         if (isInt) { 
             if (elo >= 500 && elo <= 2500) { 
+                if (elo == 1590) { elo = 2800; }  // Developer joke
                 QMessageBox::information(parentWidget, "Successful Matchup", "Playing opponent with elo " + QString::number(elo));
+                break;  // Exit the loop
+            }
+            else if (elo == 1) {
+                QMessageBox::information(parentWidget, "Successful Matchup", "Playing against a friend.");
                 break;  // Exit the loop
             }
             else if (elo == 0) { std::exit(0); }  // Terminate
         }
-        
         QMessageBox::warning(parentWidget, "Error", "Elo must be between 500 and 2500. Try again.");
     }
 }
@@ -230,5 +223,13 @@ void UserInformation::saveUser(const string& username, const string& salt, const
     out1 << username << " " << salt << " " << hash << "\n";  // Separate the tokens by spaces; separate the users by newlines
 
     ofstream out2(USER_FILE_ROOT + username, ios::app);  // Print the username to the users personal file; holds the result of every game they have played
-    out2 << username << "\n---------------------------------------------------------------------\n";
+    out2 << username << "\n---------------------------------------------------------------------\n";  // Print header
+}
+
+// Gets rid of the leading and trailing white spaces, returning the trimmed string
+string UserInformation::trim(const string& str) {
+    auto begin = str.find_first_not_of(" \t\r\n");
+    auto end = str.find_last_not_of(" \t\r\n");
+    // If the string has no beginning, it is empty. If not, build a trimmed substring
+    return (begin == string::npos) ? "" : str.substr(begin, end - begin + 1);
 }

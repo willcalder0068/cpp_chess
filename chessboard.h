@@ -4,6 +4,17 @@
 #include <QWidget>
 #include <QString>
 #include <QMap>
+#include <QHash>
+#include <QMainWindow>
+#include <QPair>
+#include "mainwindow.h"
+#include "chess.hpp"
+#include "userinformation.h"
+
+// Allows the key to be retrieved by the point in our guiToFen QHash
+inline uint qHash(const QPoint &key, uint seed = 0) {
+    return qHash(QPair<int, int>(key.x(), key.y()), seed);
+}
 
 class ChessBoard : public QWidget {  // The class is defined as a QWidget; this means that it will automatically call to paintEvent upon construction
     Q_OBJECT  // Declare the class as a Qt meta-object, meaning it can be manipulated at runtime (after compilation)
@@ -13,23 +24,29 @@ class ChessBoard : public QWidget {  // The class is defined as a QWidget; this 
         ChessBoard(QWidget *parent = nullptr);
         QSize sizeHint() const override;
 
+        void setInfo(UserInformation* i);
+        UserInformation* info = nullptr;
+
         QPoint selectedSquare;
+        QPoint pieceSquare;
 
-        struct Piece { int row; int col; };
-        
-        QMap<QString, Piece> boardState = {
-            {"w a pawn", {6, 0} }, {"w b pawn", {6, 1} }, {"w c pawn", {6, 2} }, {"w d pawn", {6, 3} }, 
-            {"w e pawn", {6, 4} }, {"w f pawn", {6, 5} }, {"w g pawn", {6, 6} }, {"w h pawn", {6, 7} }, 
-            {"b a pawn", {1, 0} }, {"b b pawn", {1, 1} }, {"b c pawn", {1, 2} }, {"b d pawn", {1, 3} }, 
-            {"b e pawn", {1, 4} }, {"b f pawn", {1, 5} }, {"b g pawn", {1, 6} }, {"b h pawn", {1, 7} },
+        std::vector<QPoint> possiblePieceMoves;
+        chess::Movelist legalMoves;
 
-            {"w a rook", {7, 0} }, {"w h rook", {7, 7} }, {"b a rook", {0, 0} }, {"b h rook", {0, 7} },
+        struct guiPiece { int row; int col; };
 
-            {"w b knight", {7, 1} }, {"w g knight", {7, 6} }, {"b b knight", {0, 1} }, {"b g knight", {0, 6} }, 
+        QMap<QString, guiPiece> boardGui;
+        chess::Board boardHard;
 
-            {"w c bishop", {7, 2} }, {"w f bishop", {7, 5} }, {"b c bishop", {0, 2} }, {"b f bishop", {0, 5} },
-
-            {"w queen", {7, 3} }, {"b queen", {0, 3} },       {"w king", {7, 4} }, {"b king", {0, 4} }
+        const QHash<QPoint, QString> guiToFen = {
+            {{0, 0}, "a8"}, {{1, 0}, "b8"}, {{2, 0}, "c8"}, {{3, 0}, "d8"}, {{4, 0}, "e8"}, {{5, 0}, "f8"}, {{6, 0}, "g8"}, {{7, 0}, "h8"},
+            {{0, 1}, "a7"}, {{1, 1}, "b7"}, {{2, 1}, "c7"}, {{3, 1}, "d7"}, {{4, 1}, "e7"}, {{5, 1}, "f7"}, {{6, 1}, "g7"}, {{7, 1}, "h7"},
+            {{0, 2}, "a6"}, {{1, 2}, "b6"}, {{2, 2}, "c6"}, {{3, 2}, "d6"}, {{4, 2}, "e6"}, {{5, 2}, "f6"}, {{6, 2}, "g6"}, {{7, 2}, "h6"},
+            {{0, 3}, "a5"}, {{1, 3}, "b5"}, {{2, 3}, "c5"}, {{3, 3}, "d5"}, {{4, 3}, "e5"}, {{5, 3}, "f5"}, {{6, 3}, "g5"}, {{7, 3}, "h5"},
+            {{0, 4}, "a4"}, {{1, 4}, "b4"}, {{2, 4}, "c4"}, {{3, 4}, "d4"}, {{4, 4}, "e4"}, {{5, 4}, "f4"}, {{6, 4}, "g4"}, {{7, 4}, "h4"},
+            {{0, 5}, "a3"}, {{1, 5}, "b3"}, {{2, 5}, "c3"}, {{3, 5}, "d3"}, {{4, 5}, "e3"}, {{5, 5}, "f3"}, {{6, 5}, "g3"}, {{7, 5}, "h3"},
+            {{0, 6}, "a2"}, {{1, 6}, "b2"}, {{2, 6}, "c2"}, {{3, 6}, "d2"}, {{4, 6}, "e2"}, {{5, 6}, "f2"}, {{6, 6}, "g2"}, {{7, 6}, "h2"},
+            {{0, 7}, "a1"}, {{1, 7}, "b1"}, {{2, 7}, "c1"}, {{3, 7}, "d1"}, {{4, 7}, "e1"}, {{5, 7}, "f1"}, {{6, 7}, "g1"}, {{7, 7}, "h1"},
         };
 
     protected:
@@ -39,6 +56,10 @@ class ChessBoard : public QWidget {  // The class is defined as a QWidget; this 
     // We put stuff that is only used within the class in private, stuff that is inherited in protected, and stuff that needs to be used elsewhere in public
     private:
         int squareSize;
+
+        chess::Square squareFromQt(QPoint q);
+        QPoint qtFromMove(chess::Move mv);
+        QPoint qtFromSquare(chess::Square sq);
 
         void drawBoard(QPainter &painter);
         void drawPieces(QPainter &painter);

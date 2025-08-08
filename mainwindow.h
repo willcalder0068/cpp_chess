@@ -2,7 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include "chessboard.h"
+
+class ChessBoard;  // Forward declare that this is a class so it can be initialized in the header file without compilation errors
 
 // Extend the QMainWindow class that we inherit from Qt
 class MainWindow : public QMainWindow {
@@ -19,6 +20,6 @@ class MainWindow : public QMainWindow {
     // Signals connect to slot actions; the signal is triggered, and the slot acts
     signals:
         void geometryChanged();
-    };
+};
 
 #endif
