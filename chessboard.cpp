@@ -1,7 +1,10 @@
 #include "chessboard.h"
+#include "promptdialog.h"
 #include <QPainter>
 #include <QMouseEvent>
 #include <QString>
+#include <QMessageBox>
+#include <QTimer>
 #include <algorithm>
 
 ChessBoard::ChessBoard(QWidget *parent)
@@ -11,6 +14,11 @@ ChessBoard::ChessBoard(QWidget *parent)
         // FEN: Lists ranks (separated by '/', numbers represent empty), color to move, castling abilities (capitol is white, lowercase is black),
         // En passant square (- if not possible, something like e6 if it is), halfmove counter, fullmove counter
         boardHard = chess::Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
+        // List holds positions; when we get three consecutive with the same position and castle rights, its a threefold repitition)
+        QStringList threeMoves = QString::fromStdString(boardHard.getFen()).split(' ');
+        threeMoveStale.push_back(threeMoves[0].toStdString());
+        threeMoveCastle.push_back(threeMoves[2].toStdString());
 
         boardGui = {
             {"w a pawn", {6, 0} },   {"w b pawn", {6, 1} },   {"w c pawn", {6, 2} },   {"w d pawn", {6, 3} }, 
@@ -34,7 +42,7 @@ void ChessBoard::setInfo(UserInformation* i) {
     info = i;
 }
 
-// Automatically called upon construction; also called with a mousePressEvent (user clicks screen)
+// Automatically called upon construction; also called within mousePressEvent (user clicks screen)
 void ChessBoard::paintEvent(QPaintEvent *) {
     QPainter painter(this);
     drawBoard(painter);
@@ -42,6 +50,7 @@ void ChessBoard::paintEvent(QPaintEvent *) {
 
     // If user info has been passed to the class (login completed)
     if (info) {
+        // Small text saying who we are playing
         if (info->elo >= 500) {
             painter.setPen(Qt::black);
             painter.drawText(380, 500, QString::fromStdString("versus " + std::to_string(info->elo) + " elo"));
@@ -49,6 +58,15 @@ void ChessBoard::paintEvent(QPaintEvent *) {
         else if (info->elo == 1) {
             painter.setPen(Qt::black);
             painter.drawText(380, 500, QString::fromStdString("versus a friend"));
+        }
+        // Small text telling the user what color he is
+        if(info->isWhite) {
+            painter.setPen(Qt::black);
+            painter.drawText(30, 500, QString::fromStdString("user is white"));
+        }
+        else {
+            painter.setPen(Qt::black);
+            painter.drawText(30, 500, QString::fromStdString("user is black"));
         }
     }
 }
@@ -60,8 +78,32 @@ void ChessBoard::mousePressEvent(QMouseEvent *event) {
     int col = event->pos().x() / squareSize;
     selectedSquare = QPoint(col, row);
 
-    legalMoves.clear();
-    chess::movegen::legalmoves(legalMoves, boardHard);  // Fil the container with all legal moves
+    QStringList fenParts = QString::fromStdString(boardHard.getFen()).split(' ');
+
+    // First move buffer to avoid runtime issues; also, the first time through legalMoves is uninitialized
+    if (boardHard.getFen() != "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") {
+        // Check for game over's
+        if (legalMoves.empty() && boardHard.inCheck()) {
+            gameOverCM();  // Checkmate
+        }
+        if (legalMoves.empty() && !boardHard.inCheck()) {
+            gameOverStale();  // Stalemate
+        }
+        if (boardHard.isInsufficientMaterial()) {
+            gameOverIN();  // Insufficient material
+        }
+        if (threeBool) {
+            threeBool = false;
+            gameOverThree();  // Threefold repition
+        }
+        // Check if fifty-move draw condition triggered
+        if (fenParts[4] == "100") {
+            gameOverFifty();  // Fifty move rule
+        }
+    }
+
+    legalMoves.clear();  // New position, clear previous moves
+    chess::movegen::legalmoves(legalMoves, boardHard);  // Fill the container with all legal moves
 
     // If the click was on the board
     if (selectedSquare.x() >= 0 && selectedSquare.x() <=7 && selectedSquare.y() >= 0 && selectedSquare.y() <= 7) {
@@ -83,10 +125,11 @@ void ChessBoard::mousePressEvent(QMouseEvent *event) {
             if (!movingKey.isEmpty()) {
                 QPoint removeSquare = selectedSquare;  // Must capture enemy pieces
 
-                // If the FEN contains the selected Square (instead of '-') AND a pawn is being moved, then the user has done an en passant
                 QString currFen = QString::fromStdString(boardHard.getFen());
+
+                // If the FEN contains the selected Square (instead of '-') AND a pawn is being moved, then the user has done an en passant
                 if (guiToFen.contains(selectedSquare) && currFen.contains(guiToFen[selectedSquare]) && boardHard.at(squareFromQt(pieceSquare)) == chess::PieceType::PAWN) {
-                    if (currFen.contains("w"))  // If white is moving (we haven't yet updated the boardHard)
+                    if (currFen.contains("w"))  // If white is moving... (we haven't yet updated the boardHard)
                         removeSquare = QPoint(col, row + 1);  // Remove the piece in the square below
                     else  // If black is moving
                         removeSquare = QPoint(col, row - 1);  // Remove the piece in the square above
@@ -97,6 +140,17 @@ void ChessBoard::mousePressEvent(QMouseEvent *event) {
                     if (it.value().row == removeSquare.y() && it.value().col == removeSquare.x()) {
                         boardGui.erase(it);
                         break;
+                    }
+                }
+
+                // If the pawn makes it all the way across, promote it to a queen
+                if (boardHard.at(squareFromQt(pieceSquare)) == chess::PieceType::PAWN) { 
+                    // White pawn all the way at the top or a black pawn all the way at the bottom
+                    if ((selectedSquare.y() == 0 && fenParts[1] == "w") || (selectedSquare.y() == 7 && fenParts[1] == "b")) {
+                        QStringList keyParts = movingKey.split(' ');  // e.g. "w a pawn" → ["w", "a", "pawn"]
+                        QString oldKey = movingKey;
+                        movingKey = keyParts[0] + " " + keyParts[1] + " queen";  // Promote the pawn (for the Gui)
+                        boardGui.remove(oldKey);  // Remove the pawn key (so it is not redrawn, it is a queen now)
                     }
                 }
 
@@ -126,15 +180,39 @@ void ChessBoard::mousePressEvent(QMouseEvent *event) {
                 else  // Non castle move
                     boardGui[movingKey] = { selectedSquare.y(), selectedSquare.x() };   // Update boardGui with the new move
 
+
                 for (const chess::Move& move : legalMoves) {
                     if (move.from() == squareFromQt(pieceSquare) && move.to() == squareFromQt(selectedSquare)) {
-                    boardHard.makeMove(move);  // Update boardHard with the new move
-                    break;
+                        boardHard.makeMove(move);  // Update boardHard with the new move
+
+                        // Check for threefold repitition
+                        QStringList threeMoves = QString::fromStdString(boardHard.getFen()).split(' ');
+                        if (threeMoves[3] == "-") {  // If the move has en passant rights, it cannot be repeated
+                            threeMoveStale.push_back(threeMoves[0].toStdString());  // Add on the relevant part of the FEN
+                            threeMoveCastle.push_back(threeMoves[2].toStdString());  // Check for changes in castling rights
+                            if (threeMoveStale.size() == 10) {
+                                // If we have three repeated positions including unchanged castling rights
+                                if (threeMoveStale[0] == threeMoveStale[4] && threeMoveStale[0] == threeMoveStale[8] && 
+                                    threeMoveStale[1] == threeMoveStale[5] && threeMoveStale[1] == threeMoveStale[9] &&
+                                    threeMoveCastle[0] == threeMoveCastle[8] && threeMoveCastle[1] == threeMoveCastle[9]) {
+                                        threeBool = true;  // Trigger a three move tie on the next mousePressEvent
+                                }
+                                // Shift down our vectors and resize them to 9 so we can push the next move
+                                for (int i = 0; i <= 8; i++) {
+                                    threeMoveStale[i] = threeMoveStale[i + 1];
+                                    threeMoveCastle[i] = threeMoveCastle[i + 1];
+                                }
+                                threeMoveStale.erase(threeMoveStale.begin() + 9);
+                                threeMoveCastle.erase(threeMoveCastle.begin() + 9);
+                            }
+                        }
+
+                        break;
                     }
                 }
             }
         }
-        // If not, we want to mark all of the possible moves
+        // If the user clicked a non highlited square, they are not moving pieces
         else {
             possiblePieceMoves.clear();  // So the next select doesn't retain the old squares
             pieceSquare = selectedSquare;  // Store this as our selected piece for movement later
@@ -146,7 +224,7 @@ void ChessBoard::mousePressEvent(QMouseEvent *event) {
             }
         }
 
-        update();  // calls paintEvent again
+        update();  // calls paintEvent
     }
 }
 
@@ -165,6 +243,7 @@ void ChessBoard::drawBoard(QPainter &painter) {
                 painter.drawRect(rect);
             }
 
+            // If one of the points is in possiblePieceMoves, highlight it with a yellow circle
             if (!(possiblePieceMoves.empty())) {
                 for (const QPoint &q : possiblePieceMoves) {
                     if (q == QPoint(col, row)) {
@@ -208,6 +287,68 @@ void ChessBoard::drawPieces(QPainter &painter) {
         else if (pieceType == "king")
             drawKing(painter, color, pos.row, pos.col);
     }
+}
+
+void ChessBoard::gameOverCM() {
+    QStringList fenPartsCM = QString::fromStdString(boardHard.getFen()).split(' ');
+
+    if (fenPartsCM[1] == "b")
+        QMessageBox::information(this, "Checkmate", "White wins!");  // Blacks turn to move, they can't
+    else
+        QMessageBox::information(this, "Checkmate", "Black wins!");  // Whites turn to move, they can't
+    gameOver();
+}
+
+void ChessBoard::gameOverStale() {
+    QMessageBox::information(this, "Stalemate", "It's a Draw!");
+    gameOver();
+}
+
+void ChessBoard::gameOverIN() {
+    QMessageBox::information(this, "Insufficient Material", "It's a Draw!");
+}
+
+void ChessBoard::gameOverThree() {
+    QMessageBox::information(this, "Threefold Repitition", "It's a Draw!");
+    gameOver();
+}
+
+void ChessBoard::gameOverFifty() {
+    QMessageBox::information(this, "Fifty Move Rule", "It's a Draw!");
+    gameOver();
+}
+
+void ChessBoard::gameOver() {
+    // Reset old board data
+    boardHard = chess::Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
+    // Clear threefold trackers
+    threeMoveStale.clear();
+    threeMoveCastle.clear();
+
+    // Re initialize threefold trackers
+    QStringList threeMoves = QString::fromStdString(boardHard.getFen()).split(' ');
+    threeMoveStale.push_back(threeMoves[0].toStdString());
+    threeMoveCastle.push_back(threeMoves[2].toStdString());
+
+    chess::movegen::legalmoves(legalMoves, boardHard);  // Fil the container with all legal moves for the fresh board
+
+    // Reset Gui board data
+    boardGui = {
+        {"w a pawn", {6, 0} },   {"w b pawn", {6, 1} },   {"w c pawn", {6, 2} },   {"w d pawn", {6, 3} }, 
+        {"w e pawn", {6, 4} },   {"w f pawn", {6, 5} },   {"w g pawn", {6, 6} },   {"w h pawn", {6, 7} }, 
+        {"b a pawn", {1, 0} },   {"b b pawn", {1, 1} },   {"b c pawn", {1, 2} },   {"b d pawn", {1, 3} }, 
+        {"b e pawn", {1, 4} },   {"b f pawn", {1, 5} },   {"b g pawn", {1, 6} },   {"b h pawn", {1, 7} },
+        {"w a rook", {7, 0} },   {"w h rook", {7, 7} },   {"b a rook", {0, 0} },   {"b h rook", {0, 7} },
+        {"w b knight", {7, 1} }, {"w g knight", {7, 6} }, {"b b knight", {0, 1} }, {"b g knight", {0, 6} }, 
+        {"w c bishop", {7, 2} }, {"w f bishop", {7, 5} }, {"b c bishop", {0, 2} }, {"b f bishop", {0, 5} },
+        {"w queen", {7, 3} },    {"b queen", {0, 3} },    {"w king", {7, 4} },     {"b king", {0, 4} }
+    };
+    
+    // Slight delay before prompting a replay
+    QTimer::singleShot(10, this, [this]() {
+        info->promptGameMode(this);
+    });
 }
 
 void ChessBoard::drawPawn(QPainter &painter, QString color, int row, int col) {

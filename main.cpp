@@ -39,7 +39,8 @@ c_cpp_properties.json: We include the Qt paths because they are not included in 
                 "C:/msys64/usr/include",
                 "C:/msys64/mingw64/include/QtWidgets",
                 "C:/msys64/mingw64/include/QtGui",
-                "C:/msys64/mingw64/include/QtCore"
+                "C:/msys64/mingw64/include/QtCore",
+                "C:/Users/wscal/OneDrive/Desktop/cpp/chess/extern"
             ],
             "defines": [
                 "_DEBUG",
@@ -55,14 +56,19 @@ chess.pro: qmake project file; used by qmake to help include all of the proper f
 QT += widgets
 CONFIG += c++17
 
+INCLUDEPATH += $$PWD/extern
+
 SOURCES += main.cpp \
            mainwindow.cpp \
-           chessboard.cpp
-           ... (every .cpp file in the program)
+           chessboard.cpp \
+           userinformation.cpp \
+           promptdialog.cpp
 
 HEADERS += mainwindow.h \
-           chessboard.h
-           ... (every .h file in the program)
+           chessboard.h \
+           userinformation.h \
+           promptdialog.h \
+           extern/chess.hpp
 
 LIBS += -lssl -lcrypto
 

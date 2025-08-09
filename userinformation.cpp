@@ -11,7 +11,7 @@ using namespace std;
 
 // Constructor; we have already filtered for erroneous inputs
 UserInformation::UserInformation(int input, QWidget *parentWidget) {
-    if (input == 1) { registerUser(parentWidget); }
+    if (input == 1)      { registerUser(parentWidget); }
     else if (input == 2) { loginUser(parentWidget); }
 }
 
@@ -25,10 +25,10 @@ void UserInformation::registerUser(QWidget *parentWidget) {
         PromptDialog prompt("Create a username: ", parentWidget);
         prompt.followParent();  // Check for movement
         prompt.exec();  // Display dialog prompt
-        username = trim(prompt.getInputText().toStdString());
+        username = trim(prompt.getInputText().toStdString());  // Clean whitespace
 
         if (username == "")
-            QMessageBox::warning(parentWidget, "Invalid Username", "Invalid username. Try again.");
+            QMessageBox::warning(parentWidget, "Invalid Username", "Invalid. Try again.");
         else if (username == "0") { std::exit(0); }  // Terminate program
         else if (users.count(username))
             QMessageBox::warning(parentWidget, "Username Taken", "User already exists. Try again.");
@@ -43,7 +43,7 @@ void UserInformation::registerUser(QWidget *parentWidget) {
 
         if (password == "0") { std::exit(0); }  // Terminate program
         else if (password == "" )
-            QMessageBox::warning(parentWidget, "Invalid Password", "Invalid password. Try again.");
+            QMessageBox::warning(parentWidget, "Invalid Password", "Invalid. Try again.");
         else {
             PromptDialog confirmPrompt("Confirm password: ", parentWidget);  // Make sure the user knows their password
             confirmPrompt.followParent();
@@ -53,7 +53,7 @@ void UserInformation::registerUser(QWidget *parentWidget) {
             if (passwordConfirm == "0") { std::exit(0); }  // Terminate program
             else if (password == passwordConfirm) { break; }  // Exit the loop
             else
-                QMessageBox::warning(parentWidget, "Mismatch", "Passwords do not match. Try again.");
+                QMessageBox::warning(parentWidget, "Mismatching Passwords", "Passwords do not match. Try again.");
         }
     }
 
@@ -62,7 +62,7 @@ void UserInformation::registerUser(QWidget *parentWidget) {
     saveUser(username, salt, hashed);
     QMessageBox::information(parentWidget, "Success", "User registered.");
 
-    gameMode = 2;  // There are no old games to review, so mark the gameMode as new game, thne prompt for elo
+    gameMode = 2;  // There are no old games to review, so mark the gameMode as new game, then prompt for elo
     promptForElo(parentWidget);
 }
 
@@ -77,9 +77,8 @@ void UserInformation::loginUser(QWidget *parentWidget) {
         userPrompt.exec();
         username = trim(userPrompt.getInputText().toStdString());
 
-        if (username == "") {
-            QMessageBox::warning(parentWidget, "Invalid Username", "Invalid username. Try again.");
-        }
+        if (username == "")
+            QMessageBox::warning(parentWidget, "Invalid Username", "Invalid. Try again.");
         else if (username == "0") { std::exit(0); }  // Terminate program
         else if (!users.count(username))
             QMessageBox::warning(parentWidget, "Not Found", "User does not exist. Try again.");
@@ -173,6 +172,13 @@ void UserInformation::promptForElo(QWidget* parentWidget) {
         }
         QMessageBox::warning(parentWidget, "Error", "Elo must be between 500 and 2500. Try again.");
     }
+
+    // Give the user a color (white or black)
+    random_device colorSeed;
+    mt19937 gen(colorSeed());
+    uniform_int_distribution<> colorDis(0, 1);  // Pick between 0 and 1
+    if (colorDis(gen) == 0) { isWhite = true; }
+    else                    { isWhite = false; }
 }
 
 string UserInformation::generateSalt(int length) {

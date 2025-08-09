@@ -17,10 +17,11 @@ class UserInformation {
     public:
         UserInformation(int input, QWidget *parent);
 
-        int elo;
-        int gameMode;
+        // Public fields; will be accessed form chessboard after the event loop has started
+        int elo, gameMode;
+        bool isWhite;
 
-        void promptGameMode(QWidget *parentWidget);
+        void promptGameMode(QWidget *parentWidget);  // Will be called from chessboard after the event loop has started
         void promptForElo(QWidget *parentWidget);
         
     private:
@@ -29,7 +30,7 @@ class UserInformation {
         const std::string PEPPER = "asdjkgb1458u79sdgkuh";
 
         std::string generateSalt(int length = 12);
-        std::string sha256(const std::string& input);
+        std::string sha256(const std::string& input);  // Imported hash function
         std::map<std::string, std::pair<std::string, std::string>> loadUsers();
         void saveUser(const std::string& username, const std::string& salt, const std::string& hash);
 

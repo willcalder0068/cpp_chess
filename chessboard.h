@@ -22,10 +22,10 @@ class ChessBoard : public QWidget {  // The class is defined as a QWidget; this 
     // Pre-declare method headers to avoid compilation error; we also declare all of our variables here to make the program more concise
     public:
         ChessBoard(QWidget *parent = nullptr);
-        QSize sizeHint() const override;
+        QSize sizeHint() const override;  // Used implicitly by Qt to manage widget layouts
 
-        void setInfo(UserInformation* i);
-        UserInformation* info = nullptr;
+        void setInfo(UserInformation* i);  // Used to pass the fields from UserInformation to ChessBoard 
+        UserInformation* info = nullptr;  // Will be initialized with info from main
 
         QPoint selectedSquare;
         QPoint pieceSquare;
@@ -38,6 +38,7 @@ class ChessBoard : public QWidget {  // The class is defined as a QWidget; this 
         QMap<QString, guiPiece> boardGui;
         chess::Board boardHard;
 
+        // Used to map from FEN and uci to QPointer
         const QHash<QPoint, QString> guiToFen = {
             {{0, 0}, "a8"}, {{1, 0}, "b8"}, {{2, 0}, "c8"}, {{3, 0}, "d8"}, {{4, 0}, "e8"}, {{5, 0}, "f8"}, {{6, 0}, "g8"}, {{7, 0}, "h8"},
             {{0, 1}, "a7"}, {{1, 1}, "b7"}, {{2, 1}, "c7"}, {{3, 1}, "d7"}, {{4, 1}, "e7"}, {{5, 1}, "f7"}, {{6, 1}, "g7"}, {{7, 1}, "h7"},
@@ -51,11 +52,16 @@ class ChessBoard : public QWidget {  // The class is defined as a QWidget; this 
 
     protected:
         void paintEvent(QPaintEvent *event) override;
-        void mousePressEvent(QMouseEvent *event) override;
+        void mousePressEvent(QMouseEvent *event) override;  // Called automatically when the user clicks
 
     // We put stuff that is only used within the class in private, stuff that is inherited in protected, and stuff that needs to be used elsewhere in public
     private:
         int squareSize;
+
+        // Used to track threefold repitition
+        bool threeBool = false;
+        std::vector<std::string> threeMoveStale;
+        std::vector<std::string> threeMoveCastle;
 
         chess::Square squareFromQt(QPoint q);
         QPoint qtFromMove(chess::Move mv);
@@ -70,6 +76,13 @@ class ChessBoard : public QWidget {  // The class is defined as a QWidget; this 
         void drawKnight(QPainter &painter, QString color, int row, int col);
         void drawQueen(QPainter &painter, QString color, int row, int col);
         void drawKing(QPainter &painter, QString color, int row, int col);
+
+        void gameOverCM();
+        void gameOverStale();
+        void gameOverIN();
+        void gameOverThree();
+        void gameOverFifty();
+        void gameOver();
 };
 
 #endif
