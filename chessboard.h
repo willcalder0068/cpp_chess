@@ -66,6 +66,10 @@ class ChessBoard : public QWidget {  // The class is defined as a QWidget; this 
         chess::Square squareFromQt(QPoint q);
         QPoint qtFromMove(chess::Move mv);
         QPoint qtFromSquare(chess::Square sq);
+        QString pieceTypeToQString(chess::PieceType pt);
+
+        void mousePressReview(int row, int col, QPoint selectedSquare);
+        void mousePressGame(int row, int col, QPoint selectedSquare);
 
         void drawBoard(QPainter &painter);
         void drawPieces(QPainter &painter);

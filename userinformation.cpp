@@ -17,7 +17,7 @@ UserInformation::UserInformation(int input, QWidget *parentWidget) {
 
 // Register a new user
 void UserInformation::registerUser(QWidget *parentWidget) {
-    string username, password, passwordConfirm;
+    string password, passwordConfirm;
     auto users = loadUsers();  // Returns the map of all users (username, (salt, hash))
 
     // We loop until the user enters a valid input or exits
@@ -68,7 +68,7 @@ void UserInformation::registerUser(QWidget *parentWidget) {
 
 // Log in the user
 void UserInformation::loginUser(QWidget *parentWidget) {
-    string username, password;
+    string password;
     auto users = loadUsers();  // Returns the map of all users (username, (salt, hash))
 
     while (true) {
@@ -111,6 +111,7 @@ void UserInformation::loginUser(QWidget *parentWidget) {
         }   
     }
 
+    writeQuit(username);
     promptGameMode(parentWidget);
 }
 
@@ -137,9 +138,14 @@ void UserInformation::promptGameMode(QWidget* parentWidget) {
     }
 
     if (gameMode == 1) {
-        elo = -1;  // Put impossible elo; we will be reviewing, not playing
+        elo = 1;  // Put impossible elo; we will be reviewing, not playing
+        promptForReview(parentWidget);
     }
     if (gameMode == 2) { promptForElo(parentWidget); }
+}
+
+void UserInformation::promptForReview(QWidget* parentWidget) {
+
 }
 
 void UserInformation::promptForElo(QWidget* parentWidget) {
@@ -229,7 +235,107 @@ void UserInformation::saveUser(const string& username, const string& salt, const
     out1 << username << " " << salt << " " << hash << "\n";  // Separate the tokens by spaces; separate the users by newlines
 
     ofstream out2(USER_FILE_ROOT + username, ios::app);  // Print the username to the users personal file; holds the result of every game they have played
-    out2 << username << "\n---------------------------------------------------------------------\n";  // Print header
+    out2 << username << "\n---------------------------------------------------------------------\n>> ";  // Print header
+}
+
+
+void UserInformation::writeMove(const string& username, const string& move) {
+    ofstream out(USER_FILE_ROOT + username, ios::app);
+    if (!out.is_open()) {
+        std::cerr << "Failed to open file for writing: " << USER_FILE_ROOT + username << std::endl;
+        return;
+    }
+
+    out << move << ", ";
+}
+
+void UserInformation::writeQuit(const string& username) {
+    ifstream in(USER_FILE_ROOT + username, ios::app);
+    std::string line, lastLine;
+
+    while (std::getline(in, line)) {
+        if (!line.empty()) { lastLine = line; }
+    }
+
+    ofstream out(USER_FILE_ROOT + username, ios::app);
+
+    if (lastLine != ">> ") {
+        out << "(Undetermined | User Quit)\n>> ";
+    } 
+}
+
+void UserInformation::writeCM(const string& username, const string& loser) {
+    ofstream out(USER_FILE_ROOT + username, ios::app);
+    string vsElo = to_string(elo);
+    if (vsElo == "1") { vsElo = " | vs. Friend)\n>> "; }
+    else {
+        vsElo = " | vs. " + vsElo + " Elo)\n>> ";
+    }
+
+    if (loser == "b" && isWhite)
+        out << "(Checkmate | White User Win" << vsElo;
+    else if (loser == "b" && !isWhite)
+        out << "(Checkmate | Black User Loss" << vsElo;
+    else if (loser == "w" && isWhite)
+        out << "(Checkmate | White User Loss" << vsElo;
+    else
+        out << "(Checkmate | Black User Win" << vsElo;
+}
+
+void UserInformation::writeStale(const string& username) {
+    ofstream out(USER_FILE_ROOT + username, ios::app);
+    string vsElo = to_string(elo);
+    if (vsElo == "1") { vsElo = " | vs. Friend)\n>> "; }
+    else {
+        vsElo = " | vs. " + vsElo + " Elo)\n>> ";
+    }
+
+    if (isWhite)
+        out << "(Stalemate | White User Draw" << vsElo;
+    else
+        out << "(Stalemate | Black User Draw" << vsElo;
+}
+
+void UserInformation::writeIN(const string& username) {
+    ofstream out(USER_FILE_ROOT + username, ios::app);
+    string vsElo = to_string(elo);
+    if (vsElo == "1") { vsElo = " | vs. Friend)\n>> "; }
+    else {
+        vsElo = " | vs. " + vsElo + " Elo)\n>> ";
+    }
+
+    if (isWhite)
+        out << "(Insufficient Material | White User Draw" << vsElo;
+    else
+        out << "(Insufficient Material | Black User Draw" << vsElo;
+}
+
+void UserInformation::writeThree(const string& username) {
+    ofstream out(USER_FILE_ROOT + username, ios::app);
+    string vsElo = to_string(elo);
+    if (vsElo == "1") { vsElo = " | vs. Friend)\n>> "; }
+    else {
+        vsElo = " | vs. " + vsElo + " Elo)\n>> ";
+    }
+
+    if (isWhite)
+        out << "(Threefold Repitition | White User Draw" << vsElo;
+    else
+        out << "(Threefold Repitition | Black User Draw" << vsElo;
+}
+
+void UserInformation::writeFifty(const string& username) {
+    ofstream out(USER_FILE_ROOT + username, ios::app);
+    string vsElo = to_string(elo);
+    if (vsElo == "1") { vsElo = " | vs. Friend)\n>> "; }
+    else {
+        vsElo = " | vs. " + vsElo + " Elo)\n>> ";
+    }
+
+    if (isWhite)
+        out << "(Fifty Move Rule | White User Draw" << vsElo;
+    else
+        out << "(Fifty Move Rule | Black User Draw" << vsElo;
 }
 
 // Gets rid of the leading and trailing white spaces, returning the trimmed string

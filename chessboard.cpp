@@ -78,26 +78,48 @@ void ChessBoard::mousePressEvent(QMouseEvent *event) {
     int col = event->pos().x() / squareSize;
     selectedSquare = QPoint(col, row);
 
+    if (!info) { mousePressGame(row, col, selectedSquare); }
+    else {
+        if (info->gameMode == 1) { mousePressReview(row, col, selectedSquare); }
+        else { mousePressGame(row, col, selectedSquare); }
+    }
+}
+
+void ChessBoard::mousePressReview(int row, int col, QPoint selectedSquare) {
+    /*
+        (1) Enable replay mode - add alternative method to promptForElo (promptForReview) in userinformation, add more stuff here
+        (2) Comment all of the changes as well as improving the structure and efficiency
+        
+        (3) Computer moves
+    */
+}
+
+void ChessBoard::mousePressGame(int row, int col, QPoint selectedSquare) {
     QStringList fenParts = QString::fromStdString(boardHard.getFen()).split(' ');
 
     // First move buffer to avoid runtime issues; also, the first time through legalMoves is uninitialized
     if (boardHard.getFen() != "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") {
         // Check for game over's
         if (legalMoves.empty() && boardHard.inCheck()) {
+            info->writeCM(info->username, fenParts[1].toStdString());
             gameOverCM();  // Checkmate
         }
         if (legalMoves.empty() && !boardHard.inCheck()) {
+            info->writeStale(info->username);
             gameOverStale();  // Stalemate
         }
         if (boardHard.isInsufficientMaterial()) {
+            info->writeIN(info->username);
             gameOverIN();  // Insufficient material
         }
         if (threeBool) {
             threeBool = false;
+            info->writeThree(info->username);
             gameOverThree();  // Threefold repition
         }
         // Check if fifty-move draw condition triggered
         if (fenParts[4] == "100") {
+            info->writeFifty(info->username);
             gameOverFifty();  // Fifty move rule
         }
     }
@@ -180,9 +202,18 @@ void ChessBoard::mousePressEvent(QMouseEvent *event) {
                 else  // Non castle move
                     boardGui[movingKey] = { selectedSquare.y(), selectedSquare.x() };   // Update boardGui with the new move
 
-
+                // Make the move on boardHard and write it to the user file
                 for (const chess::Move& move : legalMoves) {
                     if (move.from() == squareFromQt(pieceSquare) && move.to() == squareFromQt(selectedSquare)) {
+                        std::string fromIndex = guiToFen[pieceSquare].toStdString();
+                        std::string name = pieceTypeToQString(boardHard.at(squareFromQt(pieceSquare)).type()).toStdString();
+                        std::string toIndex = guiToFen[selectedSquare].toStdString();
+
+                        // Write our move to the user record
+                        if (info && !info->username.empty()) {
+                            info->writeMove(info->username, (fromIndex + " " + name + " " + toIndex));
+                        }
+
                         boardHard.makeMove(move);  // Update boardHard with the new move
 
                         // Check for threefold repitition
@@ -464,4 +495,14 @@ QPoint ChessBoard::qtFromSquare(chess::Square sq) {
     int qtCol = file;
 
     return QPoint(qtCol, qtRow);
+}
+
+QString ChessBoard::pieceTypeToQString(chess::PieceType pt) {
+    if (pt == chess::PieceType::PAWN)        { return "pawn"; }
+    else if (pt == chess::PieceType::KNIGHT) { return "knight"; }
+    else if (pt == chess::PieceType::BISHOP) { return "bishop"; }
+    else if (pt == chess::PieceType::ROOK)   { return "rook"; }
+    else if (pt == chess::PieceType::QUEEN)  { return "queen"; }
+    else if (pt == chess::PieceType::KING)   { return "king"; }
+    else                                     { return "";}
 }

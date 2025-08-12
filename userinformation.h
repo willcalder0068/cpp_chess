@@ -20,9 +20,20 @@ class UserInformation {
         // Public fields; will be accessed form chessboard after the event loop has started
         int elo, gameMode;
         bool isWhite;
+        std::string username;
 
         void promptGameMode(QWidget *parentWidget);  // Will be called from chessboard after the event loop has started
         void promptForElo(QWidget *parentWidget);
+        void promptForReview(QWidget* parentWidget);
+
+        void writeMove(const std::string& username, const std::string& move);
+
+        void writeQuit(const std::string& username);
+        void writeCM(const std::string& username, const std::string& loser);
+        void writeStale(const std::string& username);
+        void writeIN(const std::string& username);
+        void writeThree(const std::string& username);
+        void writeFifty(const std::string& username);
         
     private:
         const std::string USER_FILE_ROOT = "C:/Users/wscal/OneDrive/Desktop/cpp/chess/userdata/userrecords/";  // Store individual file in user records folder
