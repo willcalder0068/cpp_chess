@@ -13,9 +13,9 @@ class MainWindow : public QMainWindow {
     public:
         ChessBoard* board = nullptr;  // Declare the reference to the board in public so it can be accessed anywhere in the program
 
-        MainWindow(QWidget *parent = nullptr);
-        void moveEvent(QMoveEvent *event);
-        ~MainWindow();
+        MainWindow(QWidget *parent = nullptr);  // Initialize main window
+        void moveEvent(QMoveEvent *event);  // When the window is moved, we need to send a signal so our dialog can followParent
+        ~MainWindow();  // On destruction, check if the user is in the middle of a game so we can mark their file before volatile information (color, opponent elo) is deleted
 
     // Signals connect to slot actions; the signal is triggered, and the slot acts
     signals:

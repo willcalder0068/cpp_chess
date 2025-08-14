@@ -17,4 +17,9 @@ void MainWindow::moveEvent(QMoveEvent *event) {
     emit geometryChanged();
 }
 
-MainWindow::~MainWindow() {}
+// When the window is closed, mark the user file if they are still in a game
+MainWindow::~MainWindow() {
+    if (board->info) {
+        board->info->writeExit(board->info->username);
+    }
+}

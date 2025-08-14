@@ -121,5 +121,12 @@ int main(int argc, char *argv[]) {
 
     w.board->setInfo(&info);  // Make the data in UserInformation accessible for our ChessBoard instance
 
+    info.engine = new StockfishEngine(&w);
+    if (!(info.engine->start(info.enginePath))) { qWarning("Failed to start Stockfish"); }
+
+    info.engine->markNewGame();
+    info.engine->setElo(info.elo);
+    info.running = true;
+
     return a.exec();  // Start the Qt event loop, allowing the user to interact with the board (starts after we have finished with UserInformation)
 }

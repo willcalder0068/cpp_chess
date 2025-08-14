@@ -7,38 +7,37 @@
 #include <QHash>
 #include <QMainWindow>
 #include <QPair>
+#include <stack>
 #include "mainwindow.h"
 #include "chess.hpp"
 #include "userinformation.h"
 
 // Allows the key to be retrieved by the point in our guiToFen QHash
-inline uint qHash(const QPoint &key, uint seed = 0) {
-    return qHash(QPair<int, int>(key.x(), key.y()), seed);
-}
+inline uint qHash(const QPoint &key, uint seed = 0) { return qHash(QPair<int, int>(key.x(), key.y()), seed); }
+
+struct guiPiece { int row; int col; };
 
 class ChessBoard : public QWidget {  // The class is defined as a QWidget; this means that it will automatically call to paintEvent upon construction
     Q_OBJECT  // Declare the class as a Qt meta-object, meaning it can be manipulated at runtime (after compilation)
 
-    // Pre-declare method headers to avoid compilation error; we also declare all of our variables here to make the program more concise
     public:
-        ChessBoard(QWidget *parent = nullptr);
+        ChessBoard(QWidget *parent = nullptr);  // Instantiate the chess board by setting all of its initial values
         QSize sizeHint() const override;  // Used implicitly by Qt to manage widget layouts
 
         void setInfo(UserInformation* i);  // Used to pass the fields from UserInformation to ChessBoard 
-        UserInformation* info = nullptr;  // Will be initialized with info from main
+        UserInformation* info = nullptr;  // Will be initialized with info from main through setInfo
 
-        QPoint selectedSquare;
-        QPoint pieceSquare;
+        QPoint selectedSquare;  // Current square the user has clicked
+        QPoint pieceSquare;  // Previous square the user had clicked; used for moving pieces from a to b
 
-        std::vector<QPoint> possiblePieceMoves;
-        chess::Movelist legalMoves;
+        std::vector<QPoint> possiblePieceMoves;  // List of all moves possible for a piece; used for highlighting movement options
+        std::vector<QPoint> possibleComputerMoves;  // List of all possible moves for the computer
+        chess::Movelist legalMoves;  // All legal moves on the board
 
-        struct guiPiece { int row; int col; };
+        QMap<QString, guiPiece> boardGui;  // Track the board via Gui
+        chess::Board boardHard;  // Track the boards hard state
 
-        QMap<QString, guiPiece> boardGui;
-        chess::Board boardHard;
-
-        // Used to map from FEN and uci to QPointer
+        // Used to map from FEN and uci to QPointer in conversions
         const QHash<QPoint, QString> guiToFen = {
             {{0, 0}, "a8"}, {{1, 0}, "b8"}, {{2, 0}, "c8"}, {{3, 0}, "d8"}, {{4, 0}, "e8"}, {{5, 0}, "f8"}, {{6, 0}, "g8"}, {{7, 0}, "h8"},
             {{0, 1}, "a7"}, {{1, 1}, "b7"}, {{2, 1}, "c7"}, {{3, 1}, "d7"}, {{4, 1}, "e7"}, {{5, 1}, "f7"}, {{6, 1}, "g7"}, {{7, 1}, "h7"},
@@ -51,29 +50,37 @@ class ChessBoard : public QWidget {  // The class is defined as a QWidget; this 
         };
 
     protected:
-        void paintEvent(QPaintEvent *event) override;
+        void paintEvent(QPaintEvent *event) override;  // Called implicitly during construction and within MousePressEvent to create and alter the Gui
         void mousePressEvent(QMouseEvent *event) override;  // Called automatically when the user clicks
 
-    // We put stuff that is only used within the class in private, stuff that is inherited in protected, and stuff that needs to be used elsewhere in public
     private:
         int squareSize;
 
+        // Replay stacks
+        std::stack<bool> epBoolStack;  // Check if the pawn move is en passant
+        std::stack<QString> enPassantTakeStack;  // Replace the en passant take
+        std::stack<QString> pawnTakeStack;  // Replace the non en passant pawn take
+        std::stack<QString> nonPawnTakeStack;  // Replace the non pawn take
+
         // Used to track threefold repitition
         bool threeBool = false;
-        std::vector<std::string> threeMoveStale;
-        std::vector<std::string> threeMoveCastle;
-
+        std::vector<std::string> threeMoveStale, threeMoveCastle;
+        
+        // Helper converstion methods
         chess::Square squareFromQt(QPoint q);
         QPoint qtFromMove(chess::Move mv);
         QPoint qtFromSquare(chess::Square sq);
         QString pieceTypeToQString(chess::PieceType pt);
+        QPoint fenToGui(const QHash<QPoint, QString> &map, const QString &square);
+        void movePiece(QMap<QString, guiPiece>& boardGui, const QPoint& from,const QPoint& to);
+        QString findKeyByCoords(const QMap<QString, guiPiece>& map, int row, int col);
 
-        void mousePressReview(int row, int col, QPoint selectedSquare);
-        void mousePressGame(int row, int col, QPoint selectedSquare);
+        void mousePressReview(int col);  // mousePressEvent if gameMode == 1
+        void mousePressGame(QPoint selectedSquare);  // mousePressEvent if gameMode == 2
 
+        // Update Gui
         void drawBoard(QPainter &painter);
         void drawPieces(QPainter &painter);
-
         void drawPawn(QPainter &painter, QString color, int row, int col);
         void drawRook(QPainter &painter, QString color, int row, int col);
         void drawBishop(QPainter &painter, QString color, int row, int col);
@@ -81,11 +88,15 @@ class ChessBoard : public QWidget {  // The class is defined as a QWidget; this 
         void drawQueen(QPainter &painter, QString color, int row, int col);
         void drawKing(QPainter &painter, QString color, int row, int col);
 
+        // Print gameOver message, then call to gameOver()
         void gameOverCM();
         void gameOverStale();
         void gameOverIN();
         void gameOverThree();
         void gameOverFifty();
+        void gameOverUN();
+
+        // Reset all table values, delay, then call promptGameMode()
         void gameOver();
 };
 

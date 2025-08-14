@@ -9,21 +9,19 @@ PromptDialog::PromptDialog(const QString &promptText, QWidget *parent)
         setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);  // Set the window as frameless (embedded within the parent)
         setFixedSize(480, 80);
 
-        followParent();  // Call the slot function independent of the signal to orient the dialog box
+        followParent();  // Call the slot function independent of the signal to orient the dialog box upon instantiation
 
         auto *layout = new QHBoxLayout(this);
         layout->setContentsMargins(10, 10, 10, 10);
         layout->setSpacing(20);
 
-        // Where the text to the user goes
+        // Paste the promptText in the label
         auto *label = new QLabel(promptText, this);
         label->setMinimumWidth(300);
 
-        // Text box
         inputField = new QLineEdit(this);
         inputField->setMinimumWidth(100);
 
-        // Confirm button
         auto *okButton = new QPushButton("OK", this);
         connect(okButton, &QPushButton::clicked, this, &QDialog::accept);  // If the button is clicked, mark the dialog as accepted
 
@@ -32,7 +30,6 @@ PromptDialog::PromptDialog(const QString &promptText, QWidget *parent)
         layout->addWidget(okButton);
 }
 
-// Retrieve text from user
 QString PromptDialog::getInputText() const {
     return inputField->text();
 }
@@ -44,6 +41,6 @@ void PromptDialog::followParent() {
         int offsetX = globalTopLeft.x();
         int offsetY = globalTopLeft.y() + parentWidget()->height() - 80;  // Embed it below
 
-        move(offsetX, offsetY);
+        move(offsetX, offsetY);  // Follow
     }
 }
